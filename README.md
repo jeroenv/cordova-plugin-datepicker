@@ -93,14 +93,14 @@ Type: Date | empty String
 
 Default: `(empty String)` 
 
-### okText - Android
+### okText - Android, iOS
 Label of BUTTON_POSITIVE (done button). If empty, uses android.R.string.ok.
 
 Type: String | empty String
 
 Default: `(empty String)` 
 
-### cancelText - Android
+### cancelText - Android, iOS
 Label of BUTTON_NEGATIVE (cancel button). If empty, uses android.R.string.cancel.
 
 Type: String | empty String

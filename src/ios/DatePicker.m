@@ -120,6 +120,7 @@
                      }];
 
   } else {
+      
     [self.datePickerPopover dismissPopoverAnimated:YES];
   }
 }
@@ -137,7 +138,7 @@
 
 
 - (void)dateChangedAction:(id)sender {
-  [self jsDateSelected];
+    [self jsDateSelected];
 }
 
 #pragma mark - JS API
@@ -160,41 +161,66 @@
 #pragma mark - UIPopoverControllerDelegate methods
 
 - (void)popoverControllerDidDismissPopover:(UIPopoverController *)popoverController {
-  [self jsDateSelected];
+    [self jsCancel];
+    [self hide];
 }
 
 #pragma mark - Factory methods
 
 - (UIPopoverController *)createPopover:(NSMutableDictionary *)options {
+    CGFloat pickerViewWidth = 320.0f;
+    CGFloat pickerViewHeight = 246.0f;
+    UIView *datePickerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, pickerViewWidth, pickerViewHeight)];
+    
+    // y=30 for extra space between toolbar and picker
+    CGRect frame = CGRectMake(0, 30, 0, 0);
+    
+    // in iOS8, UIDatePicker couldn't be shared in multi UIViews, it will cause crash. so   create new UIDatePicker instance every time
+    if (! self.datePicker || [[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0){
+        self.datePicker = [self createDatePicker:options frame:frame];
+    }
+    [self updateDatePicker:options];
+    [datePickerView addSubview:self.datePicker];
   
-  CGFloat pickerViewWidth = 320.0f;
-  CGFloat pickerViewHeight = 216.0f;
-  UIView *datePickerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, pickerViewWidth, pickerViewHeight)];
+    // Initialize the toolbar with Cancel and Done buttons and title
+    UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame: CGRectMake(0, 0, pickerViewWidth, 44)];
+    toolbar.barStyle = (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) ? UIBarStyleDefault : UIBarStyleBlackTranslucent;
+    NSMutableArray *buttons =[[NSMutableArray alloc] init];
+    
+    // Create Cancel button
+    UIBarButtonItem *cancelButton = [[UIBarButtonItem alloc]initWithTitle:[options objectForKey:@"cancelButtonLabel"] style:UIBarButtonItemStylePlain target:self action:@selector(cancelAction:)];
+    [buttons addObject:cancelButton];
+
+    // Create space button
+    UIBarButtonItem *flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+    [buttons addObject:flexSpace];
+
+    // Create Done button
+    UIBarButtonItem *doneButton = [[UIBarButtonItem alloc] initWithTitle:[options objectForKey:@"doneButtonLabel"] style:UIBarButtonItemStyleDone target:self action:@selector(doneAction:)];
+    [buttons addObject:doneButton];
+    
+    // Add toolbar
+    [toolbar setItems:buttons animated:YES];
+    [datePickerView addSubview:toolbar];
+    
+    UIViewController *datePickerViewController = [[UIViewController alloc]init];
+    datePickerViewController.view = datePickerView;
   
-  CGRect frame = CGRectMake(0, 0, 0, 0);
-  // in iOS8, UIDatePicker couldn't be shared in multi UIViews, it will cause crash. so   create new UIDatePicker instance every time
-  if (! self.datePicker || [[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0){
-      self.datePicker = [self createDatePicker:options frame:frame];
-      [self.datePicker addTarget:self action:@selector(dateChangedAction:) forControlEvents:UIControlEventValueChanged];
-  }
-  [self updateDatePicker:options];
-  [datePickerView addSubview:self.datePicker];
+    UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:datePickerViewController];
+    popover.delegate = self;
+    [popover setPopoverContentSize:CGSizeMake(pickerViewWidth, pickerViewHeight) animated:NO];
+    
+    if(NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
+        [popover setBackgroundColor:[UIColor colorWithRed:0.97 green:0.97 blue:0.97 alpha:1.0]];
+    }
+    
+    CGFloat x = [[options objectForKey:@"x"] intValue];
+    CGFloat y = [[options objectForKey:@"y"] intValue];
+    UIPopoverArrowDirection arrowDirection = [[options objectForKey:@"popoverArrowDirection"] intValue];
   
-  UIViewController *datePickerViewController = [[UIViewController alloc]init];
-  datePickerViewController.view = datePickerView;
-  
-  UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:datePickerViewController];
-  popover.delegate = self;
-  [popover setPopoverContentSize:CGSizeMake(pickerViewWidth, pickerViewHeight) animated:NO];
-  
-  CGFloat x = [[options objectForKey:@"x"] intValue];
-  CGFloat y = [[options objectForKey:@"y"] intValue];
-  UIPopoverArrowDirection arrowDirection = [[options objectForKey:@"popoverArrowDirection"] intValue];
-  
-  CGRect anchor = CGRectMake(x, y, 1, 1);
-  [popover presentPopoverFromRect:anchor inView:self.webView.superview  permittedArrowDirections:arrowDirection animated:YES];
-  
-  return popover;
+    CGRect anchor = CGRectMake(x, y, 1, 1);
+    [popover presentPopoverFromRect:anchor inView:self.webView.superview  permittedArrowDirections:arrowDirection animated:YES];
+    return popover;
 }
 
 - (UIDatePicker *)createDatePicker:(NSMutableDictionary *)options frame:(CGRect)frame {
